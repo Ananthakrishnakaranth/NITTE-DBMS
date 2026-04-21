@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Welcome! Set Your Music Preferences</h2>
+<div class="card">
+    <p>Select at least 3 options (genres and/or artists).</p>
+    <form method="POST" action="{{ url_for('main.onboard') }}" class="onboard-grid">
+        <div>
+            <h3>Favorite Genres</h3>
+            {% for genre in genres %}
+            <label class="check-item">
+                <input type="checkbox" name="genres" value="{{ genre }}">
+                <span>{{ genre }}</span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <div>
+            <h3>Favorite Artists</h3>
+            {% for artist in artists %}
+            <label class="check-item">
+                <input type="checkbox" name="artists" value="{{ artist }}">
+                <span>{{ artist }}</span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <button type="submit">Save Preferences</button>
+    </form>
+</div>
+{% endblock %}

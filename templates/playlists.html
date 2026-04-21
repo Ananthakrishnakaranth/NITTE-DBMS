@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>My Playlists</h2>
+
+<div class="card">
+    <h3>Create Playlist</h3>
+    <form method="POST" action="{{ url_for('main.playlists') }}">
+        <label>Playlist Name</label>
+        <input type="text" name="name" required>
+        <button type="submit">Create</button>
+    </form>
+</div>
+
+<div class="card-grid">
+    {% for playlist in playlists %}
+    <div class="card">
+        <h3>{{ playlist.name }}</h3>
+        <form method="POST" action="{{ url_for('main.add_song_to_playlist', playlist_id=playlist.playlist_id) }}">
+            <label>Add Song</label>
+            <select name="song_id">
+                {% for song in songs %}
+                <option value="{{ song.song_id }}">{{ song.title }} - {{ song.artist }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Add</button>
+        </form>
+
+        <h4>Songs</h4>
+        <ul>
+            {% for item in playlist.songs %}
+            <li>{{ item.title }} - {{ item.artist }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

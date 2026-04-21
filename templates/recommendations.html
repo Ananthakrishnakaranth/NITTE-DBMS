@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Top 5 Recommendations</h2>
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Artist</th>
+                <th>Genre</th>
+                <th>Predicted Mood</th>
+                <th>Score</th>
+                <th>Feedback</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rec in recommendations %}
+            <tr>
+                <td>{{ rec.title }}</td>
+                <td>{{ rec.artist }}</td>
+                <td>{{ rec.genre }}</td>
+                <td>{{ rec.predicted_mood if rec.predicted_mood else 'unknown' }}</td>
+                <td>{{ '%.4f'|format(rec.final_score if rec.final_score else 0) }}</td>
+                <td>
+                    <div class="feedback-controls" data-song-id="{{ rec.song_id }}">
+                        <button type="button" class="feedback-btn like-btn" data-feedback="like">👍 Like</button>
+                        <button type="button" class="feedback-btn skip-btn" data-feedback="skip">⏭️ Skip</button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    async function sendFeedback(songId, feedbackType) {
+        const response = await fetch('/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                song_id: songId,
+                feedback: feedbackType,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Feedback request failed');
+        }
+    }
+
+    function applyFeedbackVisualState(container, feedbackType) {
+        const likeBtn = container.querySelector('.like-btn');
+        const skipBtn = container.querySelector('.skip-btn');
+
+        likeBtn.classList.remove('active-like');
+        skipBtn.classList.remove('active-skip');
+
+        if (feedbackType === 'like') {
+            likeBtn.classList.add('active-like');
+        } else if (feedbackType === 'skip') {
+            skipBtn.classList.add('active-skip');
+        }
+    }
+
+    document.querySelectorAll('.feedback-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const container = btn.closest('.feedback-controls');
+            const songId = Number(container.dataset.songId);
+            const feedbackType = btn.dataset.feedback;
+
+            try {
+                await sendFeedback(songId, feedbackType);
+                applyFeedbackVisualState(container, feedbackType);
+            } catch (error) {
+                console.error('Feedback failed:', error);
+            }
+        });
+    });
+</script>
+{% endblock %}

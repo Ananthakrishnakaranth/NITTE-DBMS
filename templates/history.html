@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Listening History</h2>
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Song</th>
+                <th>Artist</th>
+                <th>Duration (s)</th>
+                <th>Listened At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in history %}
+            <tr>
+                <td>{{ row.title }}</td>
+                <td>{{ row.artist }}</td>
+                <td>{{ row.listen_duration_seconds }}</td>
+                <td>{{ row.listened_at }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

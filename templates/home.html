@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Song Library</h2>
+
+<div class="card">
+    <label for="search-input">Search by title, artist, or genre</label>
+    <input id="search-input" type="text" placeholder="Type to search songs...">
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Artist</th>
+                <th>Genre</th>
+                <th>Album</th>
+                <th>Audio</th>
+                <th>Feedback</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="songs-body">
+            {% for song in songs %}
+            <tr data-song-id="{{ song.song_id }}">
+                <td>{{ song.title }}</td>
+                <td>{{ song.artist }}</td>
+                <td>{{ song.genre }}</td>
+                <td>{{ song.album }}</td>
+                <td>
+                    <audio controls preload="none" data-song-id="{{ song.song_id }}">
+                        <source src="{{ url_for('main.stream_song', song_id=song.song_id) }}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                </td>
+                <td>
+                    <div class="feedback-controls" data-song-id="{{ song.song_id }}">
+                        <button type="button" class="feedback-btn like-btn" data-feedback="like">👍 Like</button>
+                        <button type="button" class="feedback-btn skip-btn" data-feedback="skip">⏭️ Skip</button>
+                    </div>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('main.play_song', song_id=song.song_id) }}" class="inline-form">
+                        <input type="hidden" name="listen_duration_seconds" value="180">
+                        <select name="interaction_type">
+                            <option value="complete">Complete</option>
+                            <option value="like">Like</option>
+                            <option value="replay">Replay</option>
+                            <option value="skip">Skip</option>
+                        </select>
+                        <button type="submit">Log Interaction</button>
+                    </form>
+
+                    {% if playlists %}
+                    <form method="POST"
+                        action="{{ url_for('main.add_song_to_playlist', playlist_id=playlists[0].playlist_id) }}"
+                        class="inline-form">
+                        <select name="playlist_id" onchange="this.form.action='/playlists/' + this.value + '/add';">
+                            {% for pl in playlists %}
+                            <option value="{{ pl.playlist_id }}">{{ pl.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="song_id" value="{{ song.song_id }}">
+                        <button type="submit">Add to Playlist</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const initialSongs = {{ songs | tojson }};
+    const searchInput = document.getElementById('search-input');
+    const songsBody = document.getElementById('songs-body');
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function attachAudioLogHandlers() {
+        document.querySelectorAll('audio[data-song-id]').forEach((audio) => {
+            audio.addEventListener('play', async () => {
+                if (audio.dataset.logged === 'true') {
+                    return;
+                }
+
+                audio.dataset.logged = 'true';
+                const songId = audio.dataset.songId;
+                const body = new URLSearchParams({
+                    listen_duration_seconds: '180',
+                    interaction_type: 'complete',
+                });
+
+                try {
+                    await fetch(`/play/${songId}/log`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body,
+                    });
+                } catch (error) {
+                    console.error('Playback log failed:', error);
+                }
+            });
+        });
+    }
+
+    function renderRows(songs) {
+        songsBody.innerHTML = songs.map((song) => `
+            <tr data-song-id="${song.song_id}">
+                <td>${escapeHtml(song.title)}</td>
+                <td>${escapeHtml(song.artist)}</td>
+                <td>${escapeHtml(song.genre)}</td>
+                <td>${escapeHtml(song.album)}</td>
+                <td>
+                    <audio controls preload="none" data-song-id="${song.song_id}">
+                        <source src="/stream/${song.song_id}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                </td>
+                <td>
+                    <div class="feedback-controls" data-song-id="${song.song_id}">
+                        <button type="button" class="feedback-btn like-btn" data-feedback="like">👍 Like</button>
+                        <button type="button" class="feedback-btn skip-btn" data-feedback="skip">⏭️ Skip</button>
+                    </div>
+                </td>
+                <td>
+                    <form method="POST" action="/play/${song.song_id}" class="inline-form">
+                        <input type="hidden" name="listen_duration_seconds" value="180">
+                        <select name="interaction_type">
+                            <option value="complete">Complete</option>
+                            <option value="like">Like</option>
+                            <option value="replay">Replay</option>
+                            <option value="skip">Skip</option>
+                        </select>
+                        <button type="submit">Log Interaction</button>
+                    </form>
+                </td>
+            </tr>
+        `).join('');
+        attachAudioLogHandlers();
+        attachFeedbackHandlers();
+    }
+
+    async function sendFeedback(songId, feedbackType) {
+        const response = await fetch('/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                song_id: songId,
+                feedback: feedbackType,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Feedback request failed');
+        }
+    }
+
+    function applyFeedbackVisualState(container, feedbackType) {
+        const likeBtn = container.querySelector('.like-btn');
+        const skipBtn = container.querySelector('.skip-btn');
+
+        likeBtn.classList.remove('active-like');
+        skipBtn.classList.remove('active-skip');
+
+        if (feedbackType === 'like') {
+            likeBtn.classList.add('active-like');
+        } else if (feedbackType === 'skip') {
+            skipBtn.classList.add('active-skip');
+        }
+    }
+
+    function attachFeedbackHandlers() {
+        document.querySelectorAll('.feedback-btn').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const container = btn.closest('.feedback-controls');
+                const songId = Number(container.dataset.songId);
+                const feedbackType = btn.dataset.feedback;
+
+                try {
+                    await sendFeedback(songId, feedbackType);
+                    applyFeedbackVisualState(container, feedbackType);
+                } catch (error) {
+                    console.error('Feedback failed:', error);
+                }
+            });
+        });
+    }
+
+    let searchDebounce;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(async () => {
+            const query = searchInput.value.trim();
+            if (!query) {
+                renderRows(initialSongs);
+                return;
+            }
+
+            const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            renderRows(data);
+        }, 250);
+    });
+
+    attachAudioLogHandlers();
+    attachFeedbackHandlers();
+</script>
+{% endblock %}

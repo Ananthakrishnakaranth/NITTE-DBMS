@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Flask App",
+      "type": "shell",
+      "command": "./.venv/bin/python app.py",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run ML Model",
+      "type": "shell",
+      "command": "./.venv/bin/python ml_model.py",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Requirements",
+      "type": "shell",
+      "command": "./.venv/bin/pip install -r requirements.txt",
+      "problemMatcher": []
+    }
+  ]
+}

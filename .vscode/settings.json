@@ -1,0 +1,11 @@
+{
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "python.terminal.activateEnvironment": true,
+  "editor.formatOnSave": true,
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+  "chat.tools.terminal.autoApprove": {
+    "/home/kart/Desktop/DBMS-Project/.venv/bin/python": true,
+    "psql": true
+  }
+}
